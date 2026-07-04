@@ -16,7 +16,7 @@ All jobs
 Run details
 Workflow file for this run
 .github/workflows/build.yml at 6e8a2fd
-name: strongR-frida
+name: strongR-frida-jinjian
 
 on:
   schedule:
