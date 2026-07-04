@@ -1,22 +1,4 @@
-Skip to content
-hzzheyang
-strongR-frida-android
-Repository navigation
-Code
-Pull requests
-1
- (1)
-Actions
-Projects
-Security and quality
-Insights
-strongR-frida
-strongR-frida #3503
-All jobs
-Run details
-Workflow file for this run
-.github/workflows/build.yml at 6e8a2fd
-name: strongR-frida-jinjian
+name: strongR-frida-jj
 
 on:
   schedule:
@@ -75,6 +57,8 @@ jobs:
                 core.setFailed(e.message);
               }
             }
+
+
   create_release:
     needs: check_version
     runs-on: ubuntu-22.04
@@ -127,6 +111,7 @@ jobs:
         sudo apt-get update && DEBIAN_FRONTEND=noninteractive sudo apt-get install build-essential tree ninja-build gcc-multilib g++-multilib lib32stdc++-9-dev flex bison ruby ruby-dev python3-requests python3-setuptools python3-dev python3-pip libc6-dev libc6-dev-i386 -y
         sudo gem install fpm -v 1.11.0 --no-document
         python3 -m pip install lief graphlib
+
     - name: build frida for Android
       shell: bash
       run: |
@@ -158,6 +143,7 @@ jobs:
           cd ..
         done
         
+
     - name: Check release version
       id: checkReleaseVersion
       uses: actions/github-script@v3.1.0
