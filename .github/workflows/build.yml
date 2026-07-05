@@ -65,14 +65,14 @@ jobs:
     if: needs.check_version.outputs.ALREADY_RELEASE == '0'
 
     steps:
-      - uses: actions/create-release@master
+      - name: Create Release
         id: createRelease
-        name: Create Runner Release
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: "${{ needs.check_version.outputs.FRIDA_VERSION }}"
-          release_name: "${{ needs.check_version.outputs.FRIDA_VERSION }}"
+          name: "${{ needs.check_version.outputs.FRIDA_VERSION }}"
           prerelease: false
 
   android_build:
@@ -112,7 +112,7 @@ jobs:
         sudo gem install fpm -v 1.11.0 --no-document
         python3 -m pip install lief graphlib
 
-    - name: build frida for Android
+    - name: build frida for Android (arm64 only)
       shell: bash
       run: |
         git config --global user.name "${{ secrets.GIT_NAME }}"
@@ -133,16 +133,12 @@ jobs:
         done
         cd ..
         
-        ARCHES="android-arm android-arm64 android-x86 android-x86_64"
-        for ARCH in $ARCHES
-        do
-          mkdir build-$ARCH
-          cd build-$ARCH
-          ../frida/configure --host=$ARCH
-          make
-          cd ..
-        done
-        
+        # 只构建 android-arm64
+        mkdir build-android-arm64
+        cd build-android-arm64
+        ../frida/configure --host=android-arm64
+        make
+        cd ..
 
     - name: Check release version
       id: checkReleaseVersion
@@ -167,35 +163,13 @@ jobs:
           } catch (e) {
             core.setFailed(e.message);
           }
+          
     - name: package build result for Android
       shell: bash
       run: |
-        
-        gzip build-android-arm/subprojects/frida-core/server/frida-server
         gzip build-android-arm64/subprojects/frida-core/server/frida-server
-        gzip build-android-x86/subprojects/frida-core/server/frida-server
-        gzip build-android-x86_64/subprojects/frida-core/server/frida-server
-        
-        gzip build-android-arm/subprojects/frida-core/inject/frida-inject
         gzip build-android-arm64/subprojects/frida-core/inject/frida-inject
-        gzip build-android-x86/subprojects/frida-core/inject/frida-inject
-        gzip build-android-x86_64/subprojects/frida-core/inject/frida-inject
-        
-        gzip build-android-arm/subprojects/frida-core/lib/gadget/frida-gadget.so
         gzip build-android-arm64/subprojects/frida-core/lib/gadget/frida-gadget.so
-        gzip build-android-x86/subprojects/frida-core/lib/gadget/frida-gadget.so
-        gzip build-android-x86_64/subprojects/frida-core/lib/gadget/frida-gadget.so
-        
-        
-    - name: Upload android arm frida-server for strongR-frida
-      uses: actions/upload-release-asset@v1.0.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: '${{ steps.checkReleaseVersion.outputs.upload_url }}'
-        asset_path: '${{ github.workspace }}/build-android-arm/subprojects/frida-core/server/frida-server.gz'
-        asset_name: 'hluda-server-${{ needs.check_version.outputs.FRIDA_VERSION }}-android-arm.gz'
-        asset_content_type: application/octet-stream
 
     - name: Upload android arm64 frida-server for hluda
       uses: actions/upload-release-asset@v1.0.2
@@ -207,36 +181,6 @@ jobs:
         asset_name: 'hluda-server-${{ needs.check_version.outputs.FRIDA_VERSION }}-android-arm64.gz'
         asset_content_type: application/octet-stream
 
-    - name: Upload android x86 frida-server for hluda
-      uses: actions/upload-release-asset@v1.0.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: '${{ steps.checkReleaseVersion.outputs.upload_url }}'
-        asset_path: '${{ github.workspace }}/build-android-x86/subprojects/frida-core/server/frida-server.gz'
-        asset_name: 'hluda-server-${{ needs.check_version.outputs.FRIDA_VERSION }}-android-x86.gz'
-        asset_content_type: application/octet-stream
-
-    - name: Upload android x86_64 frida-server for hluda
-      uses: actions/upload-release-asset@v1.0.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: '${{ steps.checkReleaseVersion.outputs.upload_url }}'
-        asset_path: '${{ github.workspace }}/build-android-x86_64/subprojects/frida-core/server/frida-server.gz'
-        asset_name: 'hluda-server-${{ needs.check_version.outputs.FRIDA_VERSION }}-android-x86_64.gz'
-        asset_content_type: application/octet-stream
-        
-    - name: Upload android arm frida-inject for hluda
-      uses: actions/upload-release-asset@v1.0.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: '${{ steps.checkReleaseVersion.outputs.upload_url }}'
-        asset_path: '${{ github.workspace }}/build-android-arm/subprojects/frida-core/inject/frida-inject.gz'
-        asset_name: 'hluda-inject-${{ needs.check_version.outputs.FRIDA_VERSION }}-android-arm.gz'
-        asset_content_type: application/octet-stream
-        
     - name: Upload android arm64 frida-inject for hluda
       uses: actions/upload-release-asset@v1.0.2
       env:
@@ -245,36 +189,6 @@ jobs:
         upload_url: '${{ steps.checkReleaseVersion.outputs.upload_url }}'
         asset_path: '${{ github.workspace }}/build-android-arm64/subprojects/frida-core/inject/frida-inject.gz'
         asset_name: 'hluda-inject-${{ needs.check_version.outputs.FRIDA_VERSION }}-android-arm64.gz'
-        asset_content_type: application/octet-stream
-        
-    - name: Upload android x86 frida-inject for hluda
-      uses: actions/upload-release-asset@v1.0.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: '${{ steps.checkReleaseVersion.outputs.upload_url }}'
-        asset_path: '${{ github.workspace }}/build-android-x86/subprojects/frida-core/inject/frida-inject.gz'
-        asset_name: 'hluda-inject-${{ needs.check_version.outputs.FRIDA_VERSION }}-android-x86.gz'
-        asset_content_type: application/octet-stream
-        
-    - name: Upload android x86_64 frida-inject for hluda
-      uses: actions/upload-release-asset@v1.0.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: '${{ steps.checkReleaseVersion.outputs.upload_url }}'
-        asset_path: '${{ github.workspace }}/build-android-x86_64/subprojects/frida-core/inject/frida-inject.gz'
-        asset_name: 'hluda-inject-${{ needs.check_version.outputs.FRIDA_VERSION }}-android-arm-x86_64.gz'
-        asset_content_type: application/octet-stream
-    
-    - name: Upload android arm frida-gadget for hluda
-      uses: actions/upload-release-asset@v1.0.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: '${{ steps.checkReleaseVersion.outputs.upload_url }}'
-        asset_path: '${{ github.workspace }}/build-android-arm/subprojects/frida-core/lib/gadget/frida-gadget.so.gz'
-        asset_name: 'hluda-gadget-${{ needs.check_version.outputs.FRIDA_VERSION }}-android-arm.so.gz'
         asset_content_type: application/octet-stream
 
     - name: Upload android arm64 frida-gadget for hluda
@@ -285,24 +199,4 @@ jobs:
         upload_url: '${{ steps.checkReleaseVersion.outputs.upload_url }}'
         asset_path: '${{ github.workspace }}/build-android-arm64/subprojects/frida-core/lib/gadget/frida-gadget.so.gz'
         asset_name: 'hluda-gadget-${{ needs.check_version.outputs.FRIDA_VERSION }}-android-arm64.so.gz'
-        asset_content_type: application/octet-stream
-   
-    - name: Upload android x86 frida-gadget for hluda
-      uses: actions/upload-release-asset@v1.0.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: '${{ steps.checkReleaseVersion.outputs.upload_url }}'
-        asset_path: '${{ github.workspace }}/build-android-x86/subprojects/frida-core/lib/gadget/frida-gadget.so.gz'
-        asset_name: 'hluda-gadget-${{ needs.check_version.outputs.FRIDA_VERSION }}-android-x86.so.gz'
-        asset_content_type: application/octet-stream
-
-    - name: Upload android x86_64 frida-gadget for hluda
-      uses: actions/upload-release-asset@v1.0.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: '${{ steps.checkReleaseVersion.outputs.upload_url }}'
-        asset_path: '${{ github.workspace }}/build-android-x86_64/subprojects/frida-core/lib/gadget/frida-gadget.so.gz'
-        asset_name: 'hluda-gadget-${{ needs.check_version.outputs.FRIDA_VERSION }}-android-x86_64.so.gz'
         asset_content_type: application/octet-stream
